@@ -13,7 +13,7 @@ Import-Module Azure -ErrorAction SilentlyContinue
     $RGName                  = "<YOUR RESOURCE GROUP>"
     $DeployRegion            = "<SELECT AZURE REGION>"
 
-    $Branch                  = "server2016"
+    $Branch                  = "server2019"
     $AssetLocation           = "https://raw.githubusercontent.com/trdesilva/active-directory-lab-hybrid-adfs/$Branch/lab-hybrid-adfs/"
 
     $userName                = "<AD ADMINISTRATOR LOGIN>"
