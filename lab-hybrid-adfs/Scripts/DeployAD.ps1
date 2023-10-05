@@ -61,7 +61,8 @@ if (!(Test-Path -Path "$($completeFile)$step")) {
                        -DomainMode WinThreshold `
                        -ForestMode WinThreshold `
                        -Force `
-                       -SafeModeAdministratorPassword $smPassword 
+                       -SafeModeAdministratorPassword $smPassword `
+                       -NoRebootOnCompletion
 
     #record that we got this far
     New-Item -ItemType file "$($completeFile)$step"
