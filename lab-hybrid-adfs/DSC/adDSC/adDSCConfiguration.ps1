@@ -15,17 +15,22 @@ configuration DomainController
 
         [Parameter(Mandatory)]
         [String]$ADFSIPAddress,
-
+        <#
 		[Parameter(Mandatory)]
 		[Object]$usersArray,
 
 		[Parameter(Mandatory)]
 		[System.Management.Automation.PSCredential]$UserCreds,
+        #>
 
         [Int]$RetryCount=20,
         [Int]$RetryIntervalSec=30
     )
     
+    if (!(Test-Path -Path "c:\temp")) {
+        md "c:\temp"
+    }
+
     $wmiDomain      = Get-WmiObject Win32_NTDomain -Filter "DnsForestName = '$( (Get-WmiObject Win32_ComputerSystem).Domain)'"
     $shortDomain    = $wmiDomain.DomainName
     $DomainName     = $wmidomain.DnsForestName
@@ -41,7 +46,7 @@ configuration DomainController
 
     $CertPw         = $AdminCreds.Password
     $ClearPw        = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($CertPw))
-	$ClearDefUserPw = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($UserCreds.Password))
+	#$ClearDefUserPw = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($UserCreds.Password))
 
     Import-DscResource -ModuleName xComputerManagement,xNetworking,xSmbShare,xAdcsDeployment,xCertificate,PSDesiredStateConfiguration
 
@@ -110,6 +115,8 @@ configuration DomainController
 		Script ExportRoot
 		{
 			SetScript = {
+                            New-Item -ItemType file "c:\temp\ExportRootStarted"
+                            "Test print"
 							$arr       = $($using:DomainName).split('.')
 							$d         = $($using:shortDomain).ToLower()
 							$c         = $($using:ComputerName).ToUpper()
@@ -123,6 +130,7 @@ configuration DomainController
 								$root      = if ($rootcert.GetType().BaseType.Name -eq "Array") {$rootCert[0]} else {$rootCert}
 								Export-Certificate -FilePath "c:\src\$shortname.cer" -Cert $root
 							}
+                            New-Item -ItemType file "c:\temp\ExportRootEnded"
 
 						}
 			TestScript = {
@@ -157,11 +165,13 @@ configuration DomainController
 			Script "SaveCert$instance"
 			{
 				SetScript  = {
+                                New-Item -ItemType file "c:\temp\SaveCert$($instance)Started"
 								 $s = $using:subject;
 								 $s = $s -f $using:instance
 								 write-verbose "subject = $s";
 								 $cert = Get-ChildItem Cert:\LocalMachine\My | where {$_.Subject -eq "CN=$s"}
 								 Export-PfxCertificate -FilePath "c:\src\$s.pfx" -Cert $cert -Password (ConvertTo-SecureString $Using:ClearPw -AsPlainText -Force)
+                                 New-Item -ItemType file "c:\temp\SaveCert$($instance)Ended"
 							 }
 
 				GetScript  = { @{ 
@@ -180,6 +190,7 @@ configuration DomainController
 			Script "UpdateDNS$instance"
 			{
 				SetScript  = {
+                                New-Item -ItemType file "c:\temp\UpdateDNS$($instance)Started"
 								$NodeAddr  = ([int]$($using:instance) + [int]$($using:adfsStartIpNodeAddress)) - 1
 								$IPAddress = "$($using:adfsNetworkString)$NodeAddr"
 
@@ -188,6 +199,7 @@ configuration DomainController
 								$ZoneName = $s
 								$Zone     = Add-DnsServerPrimaryZone -Name $ZoneName -ReplicationScope Forest -PassThru
 								$rec      = Add-DnsServerResourceRecordA -ZoneName $ZoneName -Name "@" -AllowUpdateAny -IPv4Address $IPAddress
+                                New-Item -ItemType file "c:\temp\UpdateDNS$($instance)Ended"
 							 }
 
 				GetScript =  { @{} }
@@ -204,6 +216,7 @@ configuration DomainController
         Script InstallAADConnect
         {
             SetScript = {
+                New-Item -ItemType file "c:\temp\InstallAADConnectStarted"
                 $AADConnectDLUrl="https://download.microsoft.com/download/B/0/0/B00291D0-5A83-4DE7-86F5-980BC00DE05A/AzureADConnect.msi"
                 $exe="$env:SystemRoot\system32\msiexec.exe"
 
@@ -217,6 +230,7 @@ configuration DomainController
                 $MSIPath = $folder + "\AzureADConnect.msi"
 
                 Invoke-Expression "& `"$exe`" /i $MSIPath /qn /passive /forcerestart"
+                New-Item -ItemType file "c:\temp\InstallAADConnectEnded"
             }
 
             GetScript =  { @{} }
@@ -228,10 +242,12 @@ configuration DomainController
         Script CreateOU
         {
             SetScript = {
+                New-Item -ItemType file "c:\temp\CreateOUStarted"
                 $wmiDomain = Get-WmiObject Win32_NTDomain -Filter "DnsForestName = '$( (Get-WmiObject Win32_ComputerSystem).Domain)'"
                 $segments = $wmiDomain.DnsForestName.Split('.')
                 $path = [string]::Join(", ", ($segments | % { "DC={0}" -f $_ }))
                 New-ADOrganizationalUnit -Name "OrgUsers" -Path $path
+                New-Item -ItemType file "c:\temp\CreateOUEnded"
             }
             GetScript =  { @{} }
             TestScript = { 
@@ -239,7 +255,7 @@ configuration DomainController
                 return ($test -ine $null)
             }
         }
-
+        <#
         Script AddTestUsers
         {
             SetScript = {
@@ -290,11 +306,12 @@ configuration DomainController
             }
             DependsOn  = '[Script]CreateOU'
         }
-		
+		#>
         #using service credentials for ADFS for now
 		Script AddTools
         {
             SetScript  = {
+                New-Item -ItemType file "c:\temp\AddToolsStarted"
 				# Install AAD Tools
 					md c:\temp -ErrorAction Ignore
 					
@@ -311,6 +328,7 @@ configuration DomainController
 					Install-Module -Name AzureAD -Force
 
 					Install-Module -Name AzureADPreview -AllowClobber -Force
+                    New-Item -ItemType file "c:\temp\AddToolsEnded"
                 }
 
             GetScript =  { @{} }
