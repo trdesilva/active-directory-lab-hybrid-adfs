@@ -15,13 +15,6 @@ configuration DomainController
 
         [Parameter(Mandatory)]
         [String]$ADFSIPAddress,
-        <#
-		[Parameter(Mandatory)]
-		[Object]$usersArray,
-
-		[Parameter(Mandatory)]
-		[System.Management.Automation.PSCredential]$UserCreds,
-        #>
 
         [Int]$RetryCount=20,
         [Int]$RetryIntervalSec=30

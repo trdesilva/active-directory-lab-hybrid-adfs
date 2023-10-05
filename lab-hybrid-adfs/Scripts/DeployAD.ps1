@@ -109,3 +109,8 @@ if (!(Test-Path -Path "$($completeFile)$step")) {
     New-Item -ItemType file "$($completeFile)$step"
 }
 
+$Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "Restart-Computer"
+$Trigger = New-ScheduledTaskTrigger -At (Get-Date).AddSeconds(10)
+Register-ScheduledTask -TaskName "ScheduledReboot" -Trigger $Trigger -Action $Action -RunLevel Highest -Force
+
+
