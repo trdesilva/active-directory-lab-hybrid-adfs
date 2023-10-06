@@ -110,7 +110,7 @@ if (!(Test-Path -Path "$($completeFile)$step")) {
 }
 
 $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "Restart-Computer"
-$Trigger = New-ScheduledTaskTrigger -At (Get-Date).AddSeconds(10)
+$Trigger = New-ScheduledTaskTrigger -At (Get-Date).AddSeconds(10) -Once
 Register-ScheduledTask -TaskName "ScheduledReboot" -Trigger $Trigger -Action $Action -RunLevel Highest -Force
 
 
